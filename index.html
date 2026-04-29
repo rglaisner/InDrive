@@ -659,17 +659,20 @@ const chatHistory = [];
 document.addEventListener('DOMContentLoaded', () => {
     const aboutAppModal = document.getElementById('about-app-modal');
     const closeAboutModalBtn = document.getElementById('close-about-modal-btn');
+    if (closeAboutModalBtn && aboutAppModal) {
+        closeAboutModalBtn.addEventListener('click', () => {
+            aboutAppModal.style.display = 'none';
+        });
+    }
+
     masterApiKey = BUILD_TIME_GEMINI_KEY.trim();
     if (!masterApiKey || masterApiKey === "__GEMINI_KEY__") {
-        alert("This deployment is missing GEMINI_KEY. Configure the repository secret and redeploy.");
-        return;
+        masterApiKey = null;
+        alert("GEMINI_KEY is not configured for this build. The dashboard will open, but AI-powered features will not work until a key is configured.");
     }
 
     document.getElementById('main-content').style.display = 'block';
     renderDashboard(currentDashboardData, 'Baseline Scenario');
-    closeAboutModalBtn.addEventListener('click', () => {
-        aboutAppModal.style.display = 'none';
-    });
 
     function openTab(evt, tabName) {
         let i, tabcontent, tablinks;

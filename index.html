@@ -651,8 +651,7 @@ const initialDashboardData = {
   ]
 };
 
-const GEMINI_KEY_PLACEHOLDER = "__GEMINI_KEY_PLACEHOLDER__";
-const BUILD_TIME_GEMINI_KEY = GEMINI_KEY_PLACEHOLDER;
+const BUILD_TIME_GEMINI_KEY = "__GEMINI_KEY_PLACEHOLDER__";
 let masterApiKey = null;
 let currentDashboardData = JSON.parse(JSON.stringify(initialDashboardData));
 const chatHistory = [];
@@ -677,7 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     masterApiKey = BUILD_TIME_GEMINI_KEY.trim();
-    if (!masterApiKey || masterApiKey === GEMINI_KEY_PLACEHOLDER) {
+    const isPlaceholderKey = masterApiKey.startsWith("__GEMINI_KEY_");
+    if (!masterApiKey || isPlaceholderKey) {
         masterApiKey = null;
         alert("GEMINI_KEY is not configured for this build. The dashboard will open, but AI-powered features will not work until a key is configured.");
     }

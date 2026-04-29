@@ -412,7 +412,7 @@
                 <li><strong>What does not change automatically:</strong> Baseline report data does not auto-refresh from external data sources; it changes only through code edits or user-triggered AI transformations.</li>
             </ul>
             <div class="modal-buttons" style="justify-content: flex-end; margin-top: 1rem;">
-                <button id="close-about-modal-btn" class="modal-button primary">Open Dashboard</button>
+                <button id="close-about-modal-btn" class="modal-button primary" onclick="closeAboutModal()">Open Dashboard</button>
             </div>
         </div>
     </div>
@@ -656,12 +656,22 @@ let masterApiKey = null;
 let currentDashboardData = JSON.parse(JSON.stringify(initialDashboardData));
 const chatHistory = [];
 
+function closeAboutModal() {
+    const aboutAppModal = document.getElementById('about-app-modal');
+    if (aboutAppModal) {
+        aboutAppModal.style.display = 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const aboutAppModal = document.getElementById('about-app-modal');
     const closeAboutModalBtn = document.getElementById('close-about-modal-btn');
     if (closeAboutModalBtn && aboutAppModal) {
-        closeAboutModalBtn.addEventListener('click', () => {
-            aboutAppModal.style.display = 'none';
+        closeAboutModalBtn.addEventListener('click', closeAboutModal);
+        aboutAppModal.addEventListener('click', (event) => {
+            if (event.target === aboutAppModal) {
+                closeAboutModal();
+            }
         });
     }
 

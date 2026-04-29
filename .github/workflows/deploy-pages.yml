@@ -33,8 +33,26 @@ jobs:
             exit 1
           fi
           mkdir -p dist
-          cp index.html dist/index.html
-          sed -i "s|__GEMINI_KEY__|$GEMINI_KEY|g" dist/index.html
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          source = Path("index.html").read_text(encoding="utf-8")
+          key = os.environ.get("GEMINI_KEY", "")
+          if not key:
+              raise SystemExit("GEMINI_KEY secret is not set.")
+          built = source.replace("__GEMINI_KEY__", key)
+          if "__GEMINI_KEY__" in built:
+              raise SystemExit("Placeholder replacement failed.")
+          Path("dist/index.html").write_text(built, encoding="utf-8")
+          print("Build artifact created with injected key placeholder replacement.")
+          PY
+
+      - name: Validate build artifact
+        run: |
+          if grep -q "__GEMINI_KEY__" dist/index.html; then
+            echo "Placeholder still present in dist/index.html"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

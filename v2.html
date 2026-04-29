@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>inDrive | Location Strategy Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js, Quill, and Marked.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #05C168;
+            --primary-hover: #04A85A;
+            --background-color: #F8F9FA;
+            --card-background: #FFFFFF;
+            --text-color: #343A40;
+            --text-secondary: #6C757D;
+            --border-color: #DEE2E6;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --font-family-headings: 'Lexend', sans-serif;
+            --font-family-body: 'Inter', sans-serif;
+        }
+        body {
+            font-family: var(--font-family-body);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1.6;
+        }
+        #main-content {
+            display: none;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header h1 {
+            font-family: var(--font-family-headings);
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 2rem;
+        }
+        .header-version-link {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .header-version-link:hover {
+            text-decoration: underline;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+        .tab-button {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font-family-headings);
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.3s, border-color 0.3s;
+        }
+        .tab-button.active, .tab-button:hover {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .card {
+            background-color: var(--card-background);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px var(--shadow-color);
+        }
+        .card h2 {
+            font-family: var(--font-family-headings);
+            font-size: 1.5rem;
+            margin-top: 0;
+            color: var(--text-color);
+        }
+         .card h3 {
+            font-family: var(--font-family-headings);
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        .city-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .city-card .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .summary-table, .salary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .summary-table th, .summary-table td, .salary-table th, .salary-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .summary-table th, .salary-table th {
+            background-color: #F8F9FA;
+            font-weight: 600;
+        }
+        .qa-item {
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 1rem;
+        }
+        .qa-item p { margin: 0; }
+        .qa-item p:first-child { font-weight: bold; }
+        .chatbot-container {
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .chatbot-messages {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: #F8F9FA;
+        }
+        .chat-message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .chat-message.user {
+            background-color: var(--primary-color);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .chat-message.assistant {
+            background-color: var(--card-background);
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+        }
+        .chatbot-input {
+            display: flex;
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--card-background);
+        }
+        #chat-input {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-right: 1rem;
+            font-size: 1rem;
+        }
+        #chat-send {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        #chat-send:hover { background-color: var(--primary-hover); }
+        /* Modal Styles */
+        #api-key-modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--card-background);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .modal-content h2 {
+            font-family: var(--font-family-headings);
+            margin-top: 0;
+        }
+        .modal-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        .modal-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #run-default-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        #create-scenario-btn {
+            background-color: #e9ecef;
+            color: var(--text-color);
+        }
+        .modal-button:disabled {
+            background-color: #ced4da;
+            cursor: not-allowed;
+        }
+        /* Scenario Planner Styles */
+        #scenario-planner { display: none; }
+        #quill-editor { height: 200px; margin-bottom: 1rem; }
+        /* Loader styles */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Battle Card and Generator Styles */
+        #battle-card-generator-content { display: flex; flex-direction: column; gap: 1rem; }
+        .generator-controls { display: flex; align-items: center; gap: 1rem; }
+        #city-select {
+            padding: 0.75rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            flex-grow: 1;
+        }
+        #generate-battle-card-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #battle-card-result {
+            margin-top: 1rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: #F8F9FA;
+            min-height: 100px;
+        }
+        #battle-card-result h3 { font-family: var(--font-family-headings); color: var(--primary-color); }
+        #battle-card-result ul { list-style-type: disc; padding-left: 20px; }
+        
+        #api-error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="api-key-modal">
+        <div class="modal-content">
+            <div id="api-key-section">
+                <h2>Choose how you want to start</h2>
+                <p>
+                    Open the dashboard with the default location strategy data, or create a custom scenario and let Gemini adjust the report.
+                    The Gemini API key is configured when the site is built (same as Version 1).
+                </p>
+                <div class="modal-buttons">
+                    <button id="run-default-btn" class="modal-button" type="button">Run with Default Data</button>
+                    <button id="create-scenario-btn" class="modal-button" type="button">Create a Custom Scenario</button>
+                </div>
+                <p style="margin-top: 1.25rem; margin-bottom: 0;">
+                    <a class="header-version-link" href="./index.html">Back to Version 1 (Original)</a>
+                </p>
+            </div>
+            <div id="scenario-planner">
+                <h2>Create a Custom Scenario</h2>
+                <p>Describe your scenario below. The AI will modify the report based on your input.</p>
+                <div id="quill-editor"></div>
+                <div class="modal-buttons">
+                    <button id="process-scenario-btn" class="modal-button">Process Scenario</button>
+                </div>
+                <div class="loader" id="scenario-loader"></div>
+            </div>
+             <div id="api-error-message"></div>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <header class="header">
+            <h1>inDrive Strategic Expansion Dashboard</h1>
+            <a class="header-version-link" href="./index.html" id="switch-to-v1-link">Switch to Version 1</a>
+        </header>
+        <nav class="tabs" id="tabs-container">
+            <!-- Tab buttons will be rendered here -->
+        </nav>
+        <main id="dashboard-content">
+            <!-- Tab content will be rendered here -->
+        </main>
+    </div>
+
+<script>
+// Type definitions for clarity
+/*
+interface SalaryLevel { base: number; equity: number; overhead: number; }
+interface RoleSalaries { junior: SalaryLevel; mid: SalaryLevel; senior: SalaryLevel; lead: SalaryLevel; }
+interface TalentLevel { junior: string; mid: string; senior: string; lead: string; }
+interface City {
+  id: string; name: string; country: string; overallScore: number; talentScore: number;
+  costScore: number; operationalScore: number; regulatoryScore: number; population: string;
+  timezone: string; englishProficiency: string; keyStrengths: string[]; challenges: string[];
+  talentAvailability: { [role: string]: TalentLevel; };
+  competitors: { business: string[]; talent: string[]; };
+  salaryBenchmarks: { [role: string]: RoleSalaries; };
+}
+interface Region { name: string; cities: City[]; }
+interface ExecutiveSummary {
+  strategicObjective: string; methodology: string;
+  weights: { talentScalability: number; costEffectiveness: number; operationalViability: number; regulatoryEnvironment: number; };
+}
+interface QAItem { question: string; answer: string; }
+interface DashboardData {
+  executiveSummary: ExecutiveSummary;
+  regions: { [key: string]: Region; };
+  qaModule: QAItem[];
+}
+interface ChatMessage { role: 'user' | 'assistant'; content: string; }
+*/
+
+const initialDashboardData = {
+  executiveSummary: {
+    strategicObjective: "To identify and recommend optimal tech hub locations that balance talent scalability, cost-effectiveness, and operational readiness to accelerate inDrive's market penetration in emerging economies.",
+    methodology: "A multi-faceted scoring model was employed, synthesizing quantitative data from open-source platforms (World Bank, Numbeo, ILO) and qualitative assessments of the local tech ecosystems. Each city was evaluated against four core pillars: Talent Scalability, Cost-Effectiveness, Operational Viability, and Regulatory Environment. Weights were assigned by a 'Council of Experts' to reflect inDrive's strategic priorities for scalable, cost-efficient growth.",
+    weights: {
+      talentScalability: 0.40,
+      costEffectiveness: 0.30,
+      operationalViability: 0.20,
+      regulatoryEnvironment: 0.10
+    }
+  },
+  regions: {
+    latam: {
+      name: "Latin America (LATAM)",
+      cities: [
+        {
+          id: "bogota",
+          name: "Bogotá",
+          country: "Colombia",
+          overallScore: 7.8,
+          talentScore: 8.0,
+          costScore: 8.5,
+          operationalScore: 7.0,
+          regulatoryScore: 6.5,
+          population: "11.5M (Metro)",
+          timezone: "UTC-5",
+          englishProficiency: "Moderate",
+          keyStrengths: ["Growing Tech Scene", "Large, Young Talent Pool", "Favorable Cost of Living", "Government Tech Incentives"],
+          challenges: ["Political Instability", "Traffic & Infrastructure Gaps", "Moderate English Proficiency"],
+          talentAvailability: {
+            'Software Engineer': { junior: "Abundant", mid: "Good", senior: "Moderate", lead: "Scarce" },
+            'Product Manager': { junior: "Good", mid: "Moderate", senior: "Scarce", lead: "Very Scarce" },
+            'Data Scientist': { junior: "Good", mid: "Moderate", senior: "Scarce", lead: "Very Scarce" }
+          },
+          competitors: {
+            business: ["Uber", "Didi", "Cabify", "Rappi"],
+            talent: ["Rappi", "Mercado Libre", "Globant", "Hubspot", "Oracle"]
+          },
+          salaryBenchmarks: {
+            'Software Engineer': {
+              junior: { base: 18000, equity: 1000, overhead: 4500 },
+              mid: { base: 30000, equity: 3000, overhead: 7500 },
+              senior: { base: 45000, equity: 8000, overhead: 11250 },
+              lead: { base: 60000, equity: 15000, overhead: 15000 }
+            },
+            'Product Manager': {
+              junior: { base: 20000, equity: 1500, overhead: 5000 },
+              mid: { base: 35000, equity: 4000, overhead: 8750 },
+              senior: { base: 50000, equity: 10000, overhead: 12500 },
+              lead: { base: 65000, equity: 18000, overhead: 16250 }
+            },
+            'Data Scientist': {
+              junior: { base: 22000, equity: 1500, overhead: 5500 },
+              mid: { base: 38000, equity: 5000, overhead: 9500 },
+              senior: { base: 55000, equity: 12000, overhead: 13750 },
+              lead: { base: 70000, equity: 20000, overhead: 17500 }
+            }
+          }
+        },
+        {
+          id: "mexico_city",
+          name: "Mexico City",
+          country: "Mexico",
+          overallScore: 7.5,
+          talentScore: 7.5,
+          costScore: 7.0,
+          operationalScore: 8.0,
+          regulatoryScore: 7.2,
+          population: "22M (Metro)",
+          timezone: "UTC-6",
+          englishProficiency: "Moderate",
+          keyStrengths: ["Large Domestic Market", "Proximity to US", "Major Tech Hub", "Strong Startup Ecosystem"],
+          challenges: ["High Competition for Senior Talent", "Security Concerns", "Bureaucracy"],
+          talentAvailability: {
+            'Software Engineer': { junior: "Abundant", mid: "Good", senior: "Moderate", lead: "Moderate" },
+            'Product Manager': { junior: "Good", mid: "Good", senior: "Moderate", lead: "Scarce" },
+            'Data Scientist': { junior: "Good", mid: "Moderate", senior: "Moderate", lead: "Scarce" }
+          },
+          competitors: {
+            business: ["Uber", "Didi", "Cabify"],
+            talent: ["Google", "Microsoft", "Amazon", "Kavak", "Bitso"]
+          },
+          salaryBenchmarks: {
+            'Software Engineer': {
+              junior: { base: 24000, equity: 1500, overhead: 6000 },
+              mid: { base: 40000, equity: 4000, overhead: 10000 },
+              senior: { base: 60000, equity: 10000, overhead: 15000 },
+              lead: { base: 80000, equity: 20000, overhead: 20000 }
+            },
+            'Product Manager': {
+              junior: { base: 28000, equity: 2000, overhead: 7000 },
+              mid: { base: 45000, equity: 5000, overhead: 11250 },
+              senior: { base: 65000, equity: 12000, overhead: 16250 },
+              lead: { base: 85000, equity: 22000, overhead: 21250 }
+            },
+            'Data Scientist': {
+              junior: { base: 30000, equity: 2000, overhead: 7500 },
+              mid: { base: 50000, equity: 6000, overhead: 12500 },
+              senior: { base: 70000, equity: 15000, overhead: 17500 },
+              lead: { base: 90000, equity: 25000, overhead: 22500 }
+            }
+          }
+        },
+        {
+          id: "sao_paulo",
+          name: "São Paulo",
+          country: "Brazil",
+          overallScore: 7.2,
+          talentScore: 8.2,
+          costScore: 6.0,
+          operationalScore: 7.5,
+          regulatoryScore: 6.0,
+          population: "22.6M (Metro)",
+          timezone: "UTC-3",
+          englishProficiency: "Moderate",
+          keyStrengths: ["Largest Tech Market in LATAM", "Deepest Talent Pool", "Vibrant VC/Startup Scene"],
+          challenges: ["High Operational Costs", "Complex Tax/Regulatory System", "High Crime Rates"],
+          talentAvailability: {
+            'Software Engineer': { junior: "Abundant", mid: "Abundant", senior: "Good", lead: "Moderate" },
+            'Product Manager': { junior: "Good", mid: "Good", senior: "Moderate", lead: "Moderate" },
+            'Data Scientist': { junior: "Good", mid: "Good", senior: "Moderate", lead: "Scarce" }
+          },
+          competitors: {
+            business: ["Uber", "99 (Didi)"],
+            talent: ["Nubank", "iFood", "Loft", "Google", "Meta"]
+          },
+          salaryBenchmarks: {
+            'Software Engineer': {
+              junior: { base: 20000, equity: 1000, overhead: 7000 },
+              mid: { base: 35000, equity: 4000, overhead: 12250 },
+              senior: { base: 55000, equity: 10000, overhead: 19250 },
+              lead: { base: 75000, equity: 20000, overhead: 26250 }
+            },
+            'Product Manager': {
+              junior: { base: 22000, equity: 1500, overhead: 7700 },
+              mid: { base: 40000, equity: 5000, overhead: 14000 },
+              senior: { base: 65000, equity: 12000, overhead: 22750 },
+              lead: { base: 85000, equity: 25000, overhead: 29750 }
+            },
+            'Data Scientist': {
+              junior: { base: 25000, equity: 1500, overhead: 8750 },
+              mid: { base: 45000, equity: 6000, overhead: 15750 },
+              senior: { base: 70000, equity: 15000, overhead: 24500 },
+              lead: { base: 90000, equity: 28000, overhead: 31500 }
+            }
+          }
+        }
+      ]
+    },
+    apac: {
+        name: "Asia-Pacific (APAC)",
+        cities: [
+        {
+            id: "kuala_lumpur",
+            name: "Kuala Lumpur",
+            country: "Malaysia",
+            overallScore: 7.6,
+            talentScore: 7.0,
+            costScore: 8.8,
+            operationalScore: 7.5,
+            regulatoryScore: 7.8,
+            population: "8.6M (Metro)",
+            timezone: "UTC+8",
+            englishProficiency: "High",
+            keyStrengths: ["Excellent Cost-Effectiveness", "High English Proficiency", "Government Support for Digital Economy", "Good Infrastructure"],
+            challenges: ["Smaller Talent Pool vs. Regional Giants", "Political Uncertainty", "Brain Drain"],
+            talentAvailability: {
+                'Software Engineer': { junior: "Good", mid: "Good", senior: "Moderate", lead: "Scarce" },
+                'Product Manager': { junior: "Moderate", mid: "Scarce", senior: "Very Scarce", lead: "Very Scarce" },
+                'Data Scientist': { junior: "Moderate", mid: "Scarce", senior: "Very Scarce", lead: "Very Scarce" }
+            },
+            competitors: {
+                business: ["Grab", "AirAsia Ride", "MyCar"],
+                talent: ["Grab", "AirAsia", "Maybank", "Mindvalley", "Petronas Digital"]
+            },
+            salaryBenchmarks: {
+                'Software Engineer': {
+                    junior: { base: 15000, equity: 500, overhead: 2250 },
+                    mid: { base: 25000, equity: 2000, overhead: 3750 },
+                    senior: { base: 40000, equity: 6000, overhead: 6000 },
+                    lead: { base: 55000, equity: 12000, overhead: 8250 }
+                },
+                'Product Manager': {
+                    junior: { base: 18000, equity: 800, overhead: 2700 },
+                    mid: { base: 30000, equity: 3000, overhead: 4500 },
+                    senior: { base: 48000, equity: 8000, overhead: 7200 },
+                    lead: { base: 65000, equity: 15000, overhead: 9750 }
+                },
+                'Data Scientist': {
+                    junior: { base: 20000, equity: 1000, overhead: 3000 },
+                    mid: { base: 32000, equity: 4000, overhead: 4800 },
+                    senior: { base: 50000, equity: 10000, overhead: 7500 },
+                    lead: { base: 70000, equity: 18000, overhead: 10500 }
+                }
+            }
+        },
+        {
+            id: "bangalore",
+            name: "Bangalore",
+            country: "India",
+            overallScore: 7.4,
+            talentScore: 9.0,
+            costScore: 8.0,
+            operationalScore: 5.5,
+            regulatoryScore: 6.0,
+            population: "13.7M (Metro)",
+            timezone: "UTC+5:30",
+            englishProficiency: "High",
+            keyStrengths: ["Massive Tech Talent Pool", "World-Class R&D Hub", "Vibrant Startup Ecosystem", "Cost-Effective Talent"],
+            challenges: ["Extreme Talent Competition", "Poor Infrastructure (Traffic, Power)", "High Attrition Rates", "Bureaucratic Hurdles"],
+            talentAvailability: {
+                'Software Engineer': { junior: "Abundant", mid: "Abundant", senior: "Abundant", lead: "Good" },
+                'Product Manager': { junior: "Good", mid: "Good", senior: "Moderate", lead: "Moderate" },
+                'Data Scientist': { junior: "Abundant", mid: "Good", senior: "Good", lead: "Moderate" }
+            },
+            competitors: {
+                business: ["Uber", "Ola"],
+                talent: ["Every major global tech company", "Flipkart", "Swiggy", "PhonePe", "Countless Startups"]
+            },
+            salaryBenchmarks: {
+                'Software Engineer': {
+                    junior: { base: 12000, equity: 1000, overhead: 1500 },
+                    mid: { base: 25000, equity: 4000, overhead: 3125 },
+                    senior: { base: 45000, equity: 15000, overhead: 5625 },
+                    lead: { base: 65000, equity: 25000, overhead: 8125 }
+                },
+                'Product Manager': {
+                    junior: { base: 18000, equity: 2000, overhead: 2250 },
+                    mid: { base: 35000, equity: 8000, overhead: 4375 },
+                    senior: { base: 60000, equity: 20000, overhead: 7500 },
+                    lead: { base: 80000, equity: 35000, overhead: 10000 }
+                },
+                'Data Scientist': {
+                    junior: { base: 16000, equity: 1500, overhead: 2000 },
+                    mid: { base: 32000, equity: 7000, overhead: 4000 },
+                    senior: { base: 55000, equity: 18000, overhead: 6875 },
+                    lead: { base: 75000, equity: 30000, overhead: 9375 }
+                }
+            }
+        },
+        {
+            id: "manila",
+            name: "Manila",
+            country: "Philippines",
+            overallScore: 6.9,
+            talentScore: 6.5,
+            costScore: 9.0,
+            operationalScore: 6.0,
+            regulatoryScore: 7.0,
+            population: "14.9M (Metro)",
+            timezone: "UTC+8",
+            englishProficiency: "Very High",
+            keyStrengths: ["Exceptional English Proficiency", "Very Low Operational Costs", "Strong Customer Service Culture", "Large, Young Population"],
+            challenges: ["Developing Tech Talent Base", "Infrastructure Deficiencies (Internet)", "Traffic Congestion", "Natural Disaster Risk"],
+            talentAvailability: {
+                'Software Engineer': { junior: "Good", mid: "Moderate", senior: "Scarce", lead: "Very Scarce" },
+                'Product Manager': { junior: "Scarce", mid: "Very Scarce", senior: "Very Scarce", lead: "Very Scarce" },
+                'Data Scientist': { junior: "Scarce", mid: "Very Scarce", senior: "Very Scarce", lead: "Very Scarce" }
+            },
+            competitors: {
+                business: ["Grab"],
+                talent: ["Accenture", "Oracle", "IBM", "Canva", "Sutherland"]
+            },
+            salaryBenchmarks: {
+                'Software Engineer': {
+                    junior: { base: 10000, equity: 200, overhead: 2000 },
+                    mid: { base: 18000, equity: 1000, overhead: 3600 },
+                    senior: { base: 30000, equity: 3000, overhead: 6000 },
+                    lead: { base: 45000, equity: 7000, overhead: 9000 }
+                },
+                'Product Manager': {
+                    junior: { base: 12000, equity: 300, overhead: 2400 },
+                    mid: { base: 22000, equity: 1500, overhead: 4400 },
+                    senior: { base: 35000, equity: 4000, overhead: 7000 },
+                    lead: { base: 50000, equity: 8000, overhead: 10000 }
+                },
+                'Data Scientist': {
+                    junior: { base: 13000, equity: 300, overhead: 2600 },
+                    mid: { base: 24000, equity: 1800, overhead: 4800 },
+                    senior: { base: 38000, equity: 5000, overhead: 7600 },
+                    lead: { base: 55000, equity: 10000, overhead: 11000 }
+                }
+            }
+        }]
+    },
+    africaMiddleEast: {
+      name: "Africa & Middle East",
+      cities: [
+        {
+          id: "cairo",
+          name: "Cairo",
+          country: "Egypt",
+          overallScore: 7.9,
+          talentScore: 7.5,
+          costScore: 9.5,
+          operationalScore: 6.5,
+          regulatoryScore: 7.0,
+          population: "22.6M (Metro)",
+          timezone: "UTC+2",
+          englishProficiency: "Moderate",
+          keyStrengths: ["Extremely Cost-Effective", "Large and Growing Talent Pool", "Strategic Location", "Vibrant Startup Scene"],
+          challenges: ["Bureaucracy & Regulatory Hurdles", "Inflation & Currency Instability", "Infrastructure Strain"],
+          talentAvailability: {
+            'Software Engineer': { junior: "Abundant", mid: "Good", senior: "Moderate", lead: "Scarce" },
+            'Product Manager': { junior: "Moderate", mid: "Scarce", senior: "Very Scarce", lead: "Very Scarce" },
+            'Data Scientist': { junior: "Good", mid: "Scarce", senior: "Very Scarce", lead: "Very Scarce" }
+          },
+          competitors: {
+            business: ["Uber", "Careem", "Didi"],
+            talent: ["Microsoft", "Valeo", "Vodafone", "Swvl", "Instabug"]
+          },
+          salaryBenchmarks: {
+            'Software Engineer': {
+              junior: { base: 10000, equity: 500, overhead: 2500 },
+              mid: { base: 18000, equity: 1500, overhead: 4500 },
+              senior: { base: 30000, equity: 5000, overhead: 7500 },
+              lead: { base: 45000, equity: 10000, overhead: 11250 }
+            },
+            'Product Manager': {
+              junior: { base: 12000, equity: 800, overhead: 3000 },
+              mid: { base: 22000, equity: 2000, overhead: 5500 },
+              senior: { base: 35000, equity: 7000, overhead: 8750 },
+              lead: { base: 50000, equity: 12000, overhead: 12500 }
+            },
+            'Data Scientist': {
+              junior: { base: 14000, equity: 1000, overhead: 3500 },
+              mid: { base: 25000, equity: 2500, overhead: 6250 },
+              senior: { base: 40000, equity: 8000, overhead: 10000 },
+              lead: { base: 55000, equity: 15000, overhead: 13750 }
+            }
+          }
+        },
+        {
+          id: "lagos",
+          name: "Lagos",
+          country: "Nigeria",
+          overallScore: 7.1,
+          talentScore: 8.5,
+          costScore: 8.5,
+          operationalScore: 4.0,
+          regulatoryScore: 5.5,
+          population: "16.5M (Metro)",
+          timezone: "UTC+1",
+          englishProficiency: "High",
+          keyStrengths: ["Largest Tech Market in Africa", "Huge, Entrepreneurial Talent Pool", "High Growth Potential", "Strong English Skills"],
+          challenges: ["Severe Infrastructure Deficit (Power, Internet, Roads)", "Security Risks", "High Operational Complexity", "Corruption"],
+          talentAvailability: {
+            'Software Engineer': { junior: "Abundant", mid: "Good", senior: "Moderate", lead: "Scarce" },
+            'Product Manager': { junior: "Good", mid: "Moderate", senior: "Scarce", lead: "Very Scarce" },
+            'Data Scientist': { junior: "Good", mid: "Scarce", senior: "Very Scarce", lead: "Very Scarce" }
+          },
+          competitors: {
+            business: ["Uber", "Bolt"],
+            talent: ["Microsoft", "Google", "Paystack", "Flutterwave", "Andela"]
+          },
+          salaryBenchmarks: {
+            'Software Engineer': {
+              junior: { base: 12000, equity: 800, overhead: 2400 },
+              mid: { base: 22000, equity: 2000, overhead: 4400 },
+              senior: { base: 40000, equity: 7000, overhead: 8000 },
+              lead: { base: 60000, equity: 15000, overhead: 12000 }
+            },
+            'Product Manager': {
+              junior: { base: 15000, equity: 1000, overhead: 3000 },
+              mid: { base: 28000, equity: 3000, overhead: 5600 },
+              senior: { base: 45000, equity: 10000, overhead: 9000 },
+              lead: { base: 65000, equity: 18000, overhead: 13000 }
+            },
+            'Data Scientist': {
+              junior: { base: 16000, equity: 1200, overhead: 3200 },
+              mid: { base: 30000, equity: 4000, overhead: 6000 },
+              senior: { base: 50000, equity: 12000, overhead: 10000 },
+              lead: { base: 70000, equity: 20000, overhead: 14000 }
+            }
+          }
+        },
+        {
+          id: "nairobi",
+          name: "Nairobi",
+          country: "Kenya",
+          overallScore: 6.8,
+          talentScore: 7.0,
+          costScore: 7.5,
+          operationalScore: 6.5,
+          regulatoryScore: 6.5,
+          population: "5.3M (Metro)",
+          timezone: "UTC+3",
+          englishProficiency: "High",
+          keyStrengths: ["'Silicon Savannah' - Mature Tech Hub", "Good Quality of Life", "Strong Mobile Penetration", "Regional Business Hub"],
+          challenges: ["High Talent Competition", "Relatively Higher Cost vs. Cairo/Lagos", "Security Concerns", "Bureaucracy"],
+          talentAvailability: {
+            'Software Engineer': { junior: "Good", mid: "Good", senior: "Moderate", lead: "Scarce" },
+            'Product Manager': { junior: "Moderate", mid: "Moderate", senior: "Scarce", lead: "Very Scarce" },
+            'Data Scientist': { junior: "Moderate", mid: "Scarce", senior: "Very Scarce", lead: "Very Scarce" }
+          },
+          competitors: {
+            business: ["Uber", "Bolt", "Little"],
+            talent: ["Microsoft", "Visa", "Safaricom", "Twiga Foods", "M-KOPA"]
+          },
+          salaryBenchmarks: {
+            'Software Engineer': {
+              junior: { base: 16000, equity: 1000, overhead: 3200 },
+              mid: { base: 28000, equity: 3000, overhead: 5600 },
+              senior: { base: 45000, equity: 8000, overhead: 9000 },
+              lead: { base: 65000, equity: 16000, overhead: 13000 }
+            },
+            'Product Manager': {
+              junior: { base: 18000, equity: 1200, overhead: 3600 },
+              mid: { base: 32000, equity: 4000, overhead: 6400 },
+              senior: { base: 50000, equity: 10000, overhead: 10000 },
+              lead: { base: 70000, equity: 18000, overhead: 14000 }
+            },
+            'Data Scientist': {
+              junior: { base: 20000, equity: 1500, overhead: 4000 },
+              mid: { base: 35000, equity: 5000, overhead: 7000 },
+              senior: { base: 55000, equity: 12000, overhead: 11000 },
+              lead: { base: 75000, equity: 20000, overhead: 15000 }
+            }
+          }
+        }
+      ]
+    }
+  },
+  qaModule: [
+    { question: "How were the weights for the scoring model determined?", answer: "The weights were set by a 'Council of Experts' persona group, led by the Chief Strategy Officer. The 40% weight on Talent Scalability reflects the primary objective of rapidly scaling tech teams. Cost-Effectiveness (30%) is the next priority, aligned with inDrive's efficient business model. Operational Viability (20%) and Regulatory Environment (10%) are considered essential supporting factors for sustainable, long-term success." },
+    { question: "Why were some major global tech hubs like Singapore or Dubai not top contenders?", answer: "The analysis prioritized a balance of talent and extreme cost-effectiveness, aligning with inDrive's market positioning. While hubs like Singapore and Dubai offer immense talent and operational stability, their cost structures are significantly higher (Cost Score < 3.0), making them less suitable for establishing large-scale 'Capability Centers' under the current strategic mandate." },
+    { question: "What is the biggest risk to this strategy and how do you propose mitigating it?", answer: "The primary risk is underestimating the intensity of talent competition in these emerging markets. While talent is available, every major global and local player is vying for the same senior engineers and product managers. Mitigation involves a multi-pronged TA strategy: 1) Be aggressive with compensation, using equity as a key differentiator. 2) Build a strong employer brand that emphasizes inDrive's mission and impact. 3) Invest heavily in early-career and university programs to build a future talent pipeline, rather than only buying existing talent." },
+    { question: "How does the model account for qualitative data like 'political instability'?", answer: "Qualitative factors are integrated into the four main scoring pillars. For instance, 'political instability' or 'bureaucracy' directly lowers the 'Regulatory Environment' score. 'Poor infrastructure' lowers the 'Operational Viability' score. These are judgment-based inputs derived from sources like the Corruption Perceptions Index, World Bank's Ease of Doing Business reports, and expert analysis." },
+    { question: "The salary data seems to be from public sources. How reliable is it?", answer: "The salary benchmarks are synthesized from publicly available data (e.g., Glassdoor, Levels.fyi analogues) and should be treated as directional estimates. They are reliable for strategic comparison between markets but are not a substitute for a detailed, real-time compensation analysis which should be conducted by the People team before entering any market. The key is the *relative* cost difference between cities, which is accurately captured." },
+    { question: "Was inDrive's existing presence in these countries a factor in the analysis?", answer: "Yes, it was considered within the 'Operational Viability' score. An existing business presence (i.e., inDrive services are available) provides a soft landing, offering some market familiarity. However, a clear distinction was made between a business presence and an actual corporate/tech office. For example, having an existing office in Brazil provided a slight uplift to São Paulo's operational score due to existing legal and administrative groundwork." },
+    { question: "How was the 'Talent Availability' for different roles and seniorities assessed?", answer: "This was a qualitative assessment synthesized from multiple data points: analysis of public professional network profiles to estimate talent density, cross-referencing with local university output, analyzing the hiring patterns of competitor companies in each city, and incorporating insights from reports like the Stack Overflow Developer Survey. It's an educated estimate, not an exact census." },
+    { question: "Why is there such a heavy focus on open-source data?", answer: "Using only publicly available and open-source data ensures the entire analysis is transparent, replicable, and independently verifiable by any stakeholder. It removes reliance on proprietary, 'black box' data sets and allows for a clear understanding of how conclusions were reached. This is crucial for a decision of this magnitude." },
+    { question: "The project uses AI. How can we trust its outputs, especially for the scenario planner?", answer: "The AI's role is carefully constrained. In the Scenario Planner, the AI acts as a data transformation engine, not a decision-maker. It is given the baseline data and a user scenario, and its *only* job is to return a modified data object according to strict rules embedded in the prompt. It must use the same weighting formula to recalculate scores, ensuring consistency. All AI-generated content (battle cards, chat) is based *only* on the verified data provided in the report, acting as a sophisticated summarization and formatting tool." },
+    { question: "This is a prototype. What are the next steps to make this production-ready?", answer: "1. Integrate live data feeds via APIs where possible (e.g., currency exchange rates, real-time salary aggregators). 2. Build a secure, backed-end system to manage data instead of a hardcoded object. 3. Conduct on-the-ground due diligence in the top 1-2 recommended cities from each region. 4. Refine the AI prompts based on feedback from real TA and business users to improve the quality of generated content." }
+  ]
+};
+
+const BUILD_TIME_GEMINI_KEY = "__GEMINI_KEY_PLACEHOLDER__";
+let masterApiKey = null;
+let currentDashboardData = JSON.parse(JSON.stringify(initialDashboardData));
+let chartInstances = {};
+let quill;
+const chatHistory = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    masterApiKey = BUILD_TIME_GEMINI_KEY.trim();
+    const isPlaceholderKey = masterApiKey.startsWith("__GEMINI_KEY_");
+    if (!masterApiKey || isPlaceholderKey) {
+        masterApiKey = null;
+        alert("GEMINI_KEY is not configured for this build. The dashboard will open, but AI-powered features will not work until a key is configured.");
+    }
+
+    const runDefaultBtn = document.getElementById('run-default-btn');
+    const createScenarioBtn = document.getElementById('create-scenario-btn');
+
+    runDefaultBtn.addEventListener('click', () => {
+        closeModalAndRenderDashboard(currentDashboardData);
+    });
+
+    createScenarioBtn.addEventListener('click', () => {
+        document.getElementById('api-key-section').style.display = 'none';
+        document.getElementById('scenario-planner').style.display = 'block';
+        if (!quill) {
+            quill = new Quill('#quill-editor', {
+                theme: 'snow',
+                placeholder: 'e.g., "Double the hiring target for Senior Software Engineers in LATAM and model a 15% salary inflation in Brazil."'
+            });
+        }
+    });
+
+    document.getElementById('process-scenario-btn').addEventListener('click', handleScenarioProcessing);
+});
+
+function closeModalAndRenderDashboard(data) {
+    document.getElementById('api-key-modal').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    renderDashboard(data);
+}
+
+function showApiError(elementId, message) {
+    const errorEl = document.getElementById(elementId);
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+}
+
+function hideApiError(elementId) {
+    const errorEl = document.getElementById(elementId);
+    errorEl.style.display = 'none';
+}
+
+
+async function handleScenarioProcessing() {
+    const scenarioText = quill.getText().trim();
+    if (!scenarioText) {
+        alert("Please enter a scenario.");
+        return;
+    }
+
+    const loader = document.getElementById('scenario-loader');
+    loader.style.display = 'block';
+    hideApiError('api-error-message');
+    document.getElementById('process-scenario-btn').disabled = true;
+
+    const weights = initialDashboardData.executiveSummary.weights;
+    const systemPrompt = `You are a data transformation API. Your sole and exclusive output MUST be a complete, valid JSON object. Do not include any explanatory text, conversational filler, or markdown syntax like \`\`\`json\`. The returned string must be immediately parsable by JSON.parse() in JavaScript.
+    The user will provide a scenario and a JSON object. You must return a modified version of that JSON object based on the scenario.
+    When you modify any score for a city (talentScore, costScore, operationalScore, regulatoryScore), you MUST recalculate the 'overallScore' for that city using the following precise weighting formula:
+    overallScore = (talentScore * ${weights.talentScalability}) + (costScore * ${weights.costEffectiveness}) + (operationalScore * ${weights.operationalViability}) + (regulatoryScore * ${weights.regulatoryEnvironment}).
+    Ensure the overallScore is rounded to one decimal place. Modify salary benchmarks or other fields logically based on the scenario. Only modify fields directly impacted by the scenario.
+
+    Here is the baseline data object:
+    ${JSON.stringify(initialDashboardData)}
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${masterApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: systemPrompt }, {text: `User Scenario: "${scenarioText}"`}]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const responseText = result.candidates[0].content.parts[0].text;
+        
+        try {
+            const modifiedData = JSON.parse(responseText);
+            currentDashboardData = modifiedData; // Update the current data
+            closeModalAndRenderDashboard(modifiedData);
+        } catch (e) {
+             throw new Error("AI returned invalid JSON. Please try a different scenario.");
+        }
+
+    } catch (error) {
+        console.error('Error processing scenario:', error);
+        showApiError('api-error-message', `Error: ${error.message}. Check console for details.`);
+    } finally {
+        loader.style.display = 'none';
+        document.getElementById('process-scenario-btn').disabled = false;
+    }
+}
+
+
+function renderDashboard(data) {
+    const tabsContainer = document.getElementById('tabs-container');
+    const dashboardContent = document.getElementById('dashboard-content');
+
+    // Clear previous content
+    tabsContainer.innerHTML = '';
+    dashboardContent.innerHTML = '';
+    Object.values(chartInstances).forEach(chart => chart.destroy());
+    chartInstances = {};
+
+    const tabs = {
+        'Executive Summary': createExecutiveSummary,
+        ...Object.fromEntries(Object.values(data.regions).map(region => [region.name, () => createRegionView(region)])),
+        'Battle-Card Generator': createBattleCardGenerator,
+        'Q&A': createQA,
+        'Chatbot': createChatbot
+    };
+    
+    // Create tabs
+    Object.keys(tabs).forEach((tabName, index) => {
+        const button = document.createElement('button');
+        button.className = 'tab-button';
+        button.textContent = tabName;
+        button.dataset.tab = tabName.replace(/\s/g, '-');
+        tabsContainer.appendChild(button);
+
+        const content = document.createElement('div');
+        content.id = tabName.replace(/\s/g, '-');
+        content.className = 'tab-content';
+        content.appendChild(tabs[tabName](data));
+        dashboardContent.appendChild(content);
+
+        if (index === 0) {
+            button.classList.add('active');
+            content.classList.add('active');
+        }
+
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            button.classList.add('active');
+            content.classList.add('active');
+        });
+    });
+
+    // Render charts after content is in DOM
+    setTimeout(() => {
+        Object.values(data.regions).forEach((region) => {
+             region.cities.forEach(city => createRadarChart(city));
+        });
+    }, 0);
+}
+
+function createExecutiveSummary(data) {
+    const { executiveSummary } = data;
+    const topCities = Object.values(data.regions)
+        .map(region => region.cities.slice().sort((a, b) => b.overallScore - a.overallScore)[0])
+        .sort((a, b) => b.overallScore - a.overallScore);
+        
+    const getQualitativeScore = (score) => {
+        if (score > 8) return "Ideal";
+        if (score > 6) return "Favorable";
+        if (score > 4) return "Moderate";
+        if (score > 2) return "Challenging";
+        return "Difficult";
+    };
+
+    const fragment = document.createDocumentFragment();
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+        <h2>Executive Briefing & Strategic Recommendations</h2>
+        <p><strong>Strategic Objective:</strong> ${executiveSummary.strategicObjective}</p>
+        
+        <h3>Core Recommendations</h3>
+        <p>The following cities are recommended as the top candidates for establishing new Regional Capability Centers, based on a weighted analysis of talent, cost, operations, and regulatory factors.</p>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th>City/Country</th>
+                    <th>Overall Score (/10)</th>
+                    <th>Talent Scalability</th>
+                    <th>Cost-Effectiveness</th>
+                    <th>Operational Viability</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${topCities.map(city => `
+                    <tr>
+                        <td><strong>${city.name}</strong>, ${city.country}</td>
+                        <td>${city.overallScore.toFixed(1)}</td>
+                        <td>${getQualitativeScore(city.talentScore)}</td>
+                        <td>${getQualitativeScore(city.costScore)}</td>
+                        <td>${getQualitativeScore(city.operationalScore)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+        <h3>Methodology & Weighting</h3>
+        <p>${executiveSummary.methodology}</p>
+        <ul>
+            <li>Talent Scalability: <strong>${executiveSummary.weights.talentScalability * 100}%</strong></li>
+            <li>Cost-Effectiveness: <strong>${executiveSummary.weights.costEffectiveness * 100}%</strong></li>
+            <li>Operational Viability: <strong>${executiveSummary.weights.operationalViability * 100}%</strong></li>
+            <li>Regulatory Environment: <strong>${executiveSummary.weights.regulatoryEnvironment * 100}%</strong></li>
+        </ul>
+        
+        <h3>Integrated Workforce & Talent Acquisition Strategy</h3>
+        <p><strong>Proposed Architecture:</strong> Establish a primary hub in the top-ranked city (e.g., Bogotá) and smaller, specialized satellite offices in the other two recommended locations. This 'Hub and Spoke' model balances cost and provides access to diverse talent pools. Encourage a hybrid model (3 days in-office) to foster collaboration while offering flexibility.</p>
+        <p><strong>Phased Rollout:</strong>
+        <ul>
+            <li><strong>Months 0-6:</strong> Finalize legal setup in top city. Hire leadership (Head of Hub, Lead Recruiters). Begin aggressive sourcing for foundational Lead/Principal engineers.</li>
+            <li><strong>Months 6-12:</strong> Scale initial teams to ~50 engineers/product staff. Begin setup in secondary locations.</li>
+            <li><strong>Months 12-24:</strong> Grow primary hub to 150-200 staff. Scale satellite offices. Launch university relations and graduate hiring programs in all locations.</li>
+        </ul>
+        </p>
+        <p><strong>Key Risks & Mitigations:</strong>
+        <ul>
+            <li><strong>Risk:</strong> Intense competition for senior talent driving up costs. <strong>Mitigation:</strong> Offer compelling equity packages and emphasize inDrive's mission-driven culture and global impact.</li>
+            <li><strong>Risk:</strong> Operational friction from bureaucracy and infrastructure gaps. <strong>Mitigation:</strong> Hire experienced local operations managers early and engage top-tier local legal/consulting partners.</li>
+            <li><strong>Risk:</strong> High employee attrition after 1-2 years. <strong>Mitigation:</strong> Implement clear career pathing, provide world-class management training, and ensure compensation remains competitive through annual reviews.</li>
+        </ul>
+        </p>
+    `;
+    fragment.appendChild(card);
+    return fragment;
+}
+
+function createRegionView(region) {
+    const fragment = document.createDocumentFragment();
+    const sortedCities = region.cities.slice().sort((a,b) => b.overallScore - a.overallScore);
+    
+    sortedCities.forEach(city => {
+        const card = document.createElement('div');
+        card.className = 'card city-card';
+        card.innerHTML = `
+            <div>
+                <h2>${city.name}, ${city.country} <span style="float: right; color: var(--primary-color); font-size: 1.8rem;">${city.overallScore.toFixed(1)}</span></h2>
+                <div class="grid">
+                    <div>
+                        <h3>Talent Intelligence</h3>
+                        <ul>
+                            ${Object.entries(city.talentAvailability).map(([role, levels]) => `
+                                <li><strong>${role}:</strong> Junior (${levels.junior}), Mid (${levels.mid}), Senior (${levels.senior})</li>
+                            `).join('')}
+                        </ul>
+                        <p><strong>Talent Competitors:</strong> ${city.competitors.talent.join(', ')}</p>
+                    </div>
+                    <div>
+                         <h3>Operational Viability</h3>
+                         <ul>
+                            <li><strong>Population:</strong> ${city.population}</li>
+                            <li><strong>Timezone:</strong> ${city.timezone}</li>
+                            <li><strong>English Proficiency:</strong> ${city.englishProficiency}</li>
+                         </ul>
+                         <p><strong>Key Strengths:</strong> ${city.keyStrengths.join(', ')}</p>
+                         <p><strong>Challenges:</strong> ${city.challenges.join(', ')}</p>
+                    </div>
+                </div>
+                <h3>Compensation Benchmarks (Annual Base USD)</h3>
+                <table class="salary-table">
+                     <thead>
+                        <tr><th>Role</th><th>Junior</th><th>Mid</th><th>Senior</th><th>Lead</th></tr>
+                     </thead>
+                     <tbody>
+                        ${Object.entries(city.salaryBenchmarks).map(([role, salaries]) => `
+                            <tr>
+                                <td><strong>${role}</strong></td>
+                                <td>$${salaries.junior.base.toLocaleString()}</td>
+                                <td>$${salaries.mid.base.toLocaleString()}</td>
+                                <td>$${salaries.senior.base.toLocaleString()}</td>
+                                <td>$${salaries.lead.base.toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                     </tbody>
+                </table>
+            </div>
+            <div class="chart-container">
+                <canvas id="chart-${city.id}"></canvas>
+            </div>
+        `;
+        fragment.appendChild(card);
+    });
+    return fragment;
+}
+
+function createRadarChart(city) {
+    const ctx = document.getElementById(`chart-${city.id}`);
+    if (!ctx) return;
+    
+    const data = {
+        labels: ['Talent', 'Cost', 'Operations', 'Regulatory'],
+        datasets: [{
+            label: `${city.name} Score`,
+            data: [city.talentScore, city.costScore, city.operationalScore, city.regulatoryScore],
+            fill: true,
+            backgroundColor: 'rgba(5, 193, 104, 0.2)',
+            borderColor: 'rgb(5, 193, 104)',
+            pointBackgroundColor: 'rgb(5, 193, 104)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgb(5, 193, 104)'
+        }]
+    };
+
+    const options = {
+        maintainAspectRatio: false,
+        scales: {
+            r: {
+                angleLines: { display: false },
+                suggestedMin: 0,
+                suggestedMax: 10,
+                ticks: { backdropColor: 'transparent', stepSize: 2 },
+                pointLabels: { font: { size: 14 } }
+            }
+        },
+        plugins: {
+            legend: { display: false }
+        }
+    };
+
+    chartInstances[city.id] = new Chart(ctx, { type: 'radar', data, options });
+}
+
+function createQA(data) {
+    const fragment = document.createDocumentFragment();
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<h2>Frequently Asked Questions</h2>`;
+    data.qaModule.forEach(item => {
+        const qaItem = document.createElement('div');
+        qaItem.className = 'qa-item';
+        qaItem.innerHTML = `<p>${item.question}</p><p>${item.answer}</p>`;
+        card.appendChild(qaItem);
+    });
+    fragment.appendChild(card);
+    return fragment;
+}
+
+function createBattleCardGenerator(data) {
+    const fragment = document.createDocumentFragment();
+    const container = document.createElement('div');
+    container.className = 'card';
+    container.innerHTML = `
+        <h2>Talent Acquisition Battle-Card Generator</h2>
+        <p>Select a top city to generate an AI-powered TA battle-card with sourcing strategies, messaging, and risk analysis.</p>
+        <div id="battle-card-generator-content">
+            <div class="generator-controls">
+                <select id="city-select">
+                    <!-- options will be populated here -->
+                </select>
+                <button id="generate-battle-card-btn">Generate</button>
+            </div>
+            <div class="loader" id="battle-card-loader"></div>
+            <div id="api-error-message-battlecard" style="color: #dc3545; text-align: center; margin-top: 1rem; display: none;"></div>
+            <div id="battle-card-result">Select a city and click "Generate" to see the result.</div>
+        </div>
+    `;
+
+    fragment.appendChild(container);
+
+    // Populate dropdown after element is in DOM
+    setTimeout(() => {
+        const select = document.getElementById('city-select');
+        if(!select) return;
+
+        const cities = [];
+        Object.values(data.regions).forEach((region) => {
+            region.cities.forEach(city => {
+                cities.push({ id: city.id, name: `${city.name}, ${city.country}` });
+            });
+        });
+        
+        cities.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city.id;
+            option.textContent = city.name;
+            select.appendChild(option);
+        });
+
+        document.getElementById('generate-battle-card-btn').addEventListener('click', generateBattleCard);
+    }, 0);
+
+    return fragment;
+}
+
+async function generateBattleCard() {
+    if (!masterApiKey) {
+        alert("API Key not found. Please refresh and enter your key.");
+        return;
+    }
+
+    const cityId = document.getElementById('city-select').value;
+    const loader = document.getElementById('battle-card-loader');
+    const resultContainer = document.getElementById('battle-card-result');
+    const button = document.getElementById('generate-battle-card-btn');
+
+    let cityData = null;
+    Object.values(currentDashboardData.regions).forEach(region => {
+        const found = region.cities.find(c => c.id === cityId);
+        if (found) cityData = found;
+    });
+
+    if (!cityData) {
+        resultContainer.innerHTML = "Could not find data for the selected city.";
+        return;
+    }
+
+    loader.style.display = 'block';
+    button.disabled = true;
+    resultContainer.innerHTML = '';
+    hideApiError('api-error-message-battlecard');
+
+    const prompt = `
+        Act as a Head of Talent Acquisition for inDrive. Generate a detailed "Talent Acquisition Battle-Card" for ${cityData.name}, ${cityData.country}.
+        Use *only* the data provided below. Format the output as clean Markdown.
+
+        **Executive Pitch:** A short, compelling paragraph for recruiters to sell the opportunity. Create variations for Software Engineer, Product Manager, and Data Scientist roles if the data suggests different angles.
+        **Location Fun Facts & Cultural Specifics:** A short list (min 3 points) for recruiters to understand local uniqueness and build rapport.
+        **Sourcing Strategy:** Recommend primary channels and a competitor poaching list with justifications. Provide specific advice for the three core job families.
+        **Candidate Messaging & EVP (Employee Value Proposition):** Key points to differentiate inDrive from local talent competitors. Tailor for the job families.
+        **Compensation & Offer Strategy:** Advice on how to position offers based on the benchmark data.
+        **Key Recruitment Risks & Mitigation:** Identify top 3 recruitment-specific risks and propose mitigations.
+
+        **DATA FOR ${cityData.name.toUpperCase()}:**
+        ---
+        - **Overall Context:** Key Strengths are ${cityData.keyStrengths.join(', ')}. Challenges include ${cityData.challenges.join(', ')}.
+        - **Talent Competitors:** ${cityData.competitors.talent.join(', ')}.
+        - **Business Competitors (local market):** ${cityData.competitors.business.join(', ')}.
+        - **Talent Availability (Software Engineer):** Junior: ${cityData.talentAvailability['Software Engineer'].junior}, Mid: ${cityData.talentAvailability['Software Engineer'].mid}, Senior: ${cityData.talentAvailability['Software Engineer'].senior}.
+        - **Talent Availability (Product Manager):** Junior: ${cityData.talentAvailability['Product Manager'].junior}, Mid: ${cityData.talentAvailability['Product Manager'].mid}, Senior: ${cityData.talentAvailability['Product Manager'].senior}.
+        - **Talent Availability (Data Scientist):** Junior: ${cityData.talentAvailability['Data Scientist'].junior}, Mid: ${cityData.talentAvailability['Data Scientist'].mid}, Senior: ${cityData.talentAvailability['Data Scientist'].senior}.
+        - **Compensation Benchmarks (Annual Base USD):**
+          - Software Engineer (Senior): $${cityData.salaryBenchmarks['Software Engineer'].senior.base}
+          - Product Manager (Senior): $${cityData.salaryBenchmarks['Product Manager'].senior.base}
+          - Data Scientist (Senior): $${cityData.salaryBenchmarks['Data Scientist'].senior.base}
+        ---
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${masterApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`API Error: ${response.status} - ${errorBody}`);
+        }
+
+        const result = await response.json();
+        const markdownContent = result.candidates[0].content.parts[0].text;
+        resultContainer.innerHTML = marked.parse(markdownContent);
+
+    } catch (error) {
+        console.error('Error generating battle card:', error);
+        showApiError('api-error-message-battlecard', `Failed to generate battle card. ${error.message}`);
+        resultContainer.innerHTML = 'An error occurred. Please try again.';
+    } finally {
+        loader.style.display = 'none';
+        button.disabled = false;
+    }
+}
+
+
+function createChatbot() {
+    const fragment = document.createDocumentFragment();
+    const container = document.createElement('div');
+    container.className = 'card';
+    container.innerHTML = `
+        <h2>Ask the Council of Experts</h2>
+        <p>Chat with our AI assistant, powered by insights from the Council of Experts (CSO, TI, GC, Data Engineer). Ask anything about the report, data, or strategy.</p>
+        <div class="chatbot-container">
+            <div class="chatbot-messages" id="chatbot-messages">
+                <div class="chat-message assistant">Hello! I am the Council of Experts assistant. How can I help you analyze this location strategy report?</div>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chat-input" placeholder="e.g., 'Compare the talent pools in Cairo and Lagos.'">
+                <button id="chat-send">Send</button>
+            </div>
+        </div>
+        <div id="api-error-message-chat" style="color: #dc3545; text-align: center; margin-top: 1rem; display: none;"></div>
+    `;
+
+    fragment.appendChild(container);
+    
+    setTimeout(() => {
+        const sendButton = document.getElementById('chat-send');
+        const chatInput = document.getElementById('chat-input');
+        if (sendButton) {
+            sendButton.addEventListener('click', handleChatSend);
+            chatInput.addEventListener('keypress', (e) => {
+                if(e.key === 'Enter') handleChatSend();
+            });
+        }
+    }, 0);
+
+    return fragment;
+}
+
+async function handleChatSend() {
+    if (!masterApiKey) {
+        alert("API Key not found. Please refresh and enter your key.");
+        return;
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    const userMessage = chatInput.value.trim();
+    if (!userMessage) return;
+
+    appendChatMessage('user', userMessage);
+    chatHistory.push({ role: 'user', content: userMessage });
+    chatInput.value = '';
+    
+    hideApiError('api-error-message-chat');
+    
+    const contextPrompt = `
+        You are a helpful "Council of Experts" chatbot assistant for inDrive. Your council consists of a Chief Strategy Officer, Head of Talent Intelligence, General Counsel, and Principal Data Engineer.
+        Your goal is to answer questions based *only* on the provided data from the Location Strategy Report and the chat history.
+        Do not make up information. If the answer is not in the data, say "That information is not available in the report."
+        Adopt the persona of the most relevant expert for the question. For example, answer questions about talent as the Head of Talent Intelligence.
+        
+        Here is the full data report:
+        ${JSON.stringify(currentDashboardData)}
+
+        Here is the current conversation history:
+        ${JSON.stringify(chatHistory)}
+
+        Now, answer the user's last message.
+    `;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${masterApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: contextPrompt }] }] })
+        });
+
+        if (!response.ok) {
+             const errorBody = await response.text();
+            throw new Error(`API Error: ${response.status} - ${errorBody}`);
+        }
+
+        const result = await response.json();
+        const assistantMessage = result.candidates[0].content.parts[0].text;
+
+        appendChatMessage('assistant', assistantMessage);
+        chatHistory.push({ role: 'assistant', content: assistantMessage });
+
+    } catch (error) {
+        console.error('Chatbot error:', error);
+        appendChatMessage('assistant', `Sorry, I encountered an error: ${error.message}`);
+        showApiError('api-error-message-chat', `Chatbot error: ${error.message}`)
+    }
+}
+
+function appendChatMessage(role, content) {
+    const messagesContainer = document.getElementById('chatbot-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${role}`;
+    // Sanitize content before inserting as HTML
+    const cleanContent = content.replace(/</g, "<").replace(/>/g, ">");
+    messageDiv.innerHTML = cleanContent.replace(/\n/g, '<br>'); // Keep line breaks
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+
+</script>
+</body>
+</html>

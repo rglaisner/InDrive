@@ -36,23 +36,26 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import os
-          source = Path("index.html").read_text(encoding="utf-8")
           key = os.environ.get("GEMINI_KEY", "")
           if not key:
               raise SystemExit("GEMINI_KEY secret is not set.")
-          built = source.replace("__GEMINI_KEY_PLACEHOLDER__", key)
-          if "__GEMINI_KEY_PLACEHOLDER__" in built:
-              raise SystemExit("Placeholder replacement failed.")
-          Path("dist/index.html").write_text(built, encoding="utf-8")
-          print("Build artifact created with injected key placeholder replacement.")
+          for src, dst in [("index.html", "dist/index.html"), ("v2.html", "dist/v2.html")]:
+              source = Path(src).read_text(encoding="utf-8")
+              built = source.replace("__GEMINI_KEY_PLACEHOLDER__", key)
+              if "__GEMINI_KEY_PLACEHOLDER__" in built:
+                  raise SystemExit(f"Placeholder replacement failed in {src}.")
+              Path(dst).write_text(built, encoding="utf-8")
+              print(f"Wrote {dst} with injected key.")
           PY
 
       - name: Validate build artifact
         run: |
-          if grep -q "__GEMINI_KEY_PLACEHOLDER__" dist/index.html; then
-            echo "Placeholder still present in dist/index.html"
-            exit 1
-          fi
+          for f in dist/index.html dist/v2.html; do
+            if grep -q "__GEMINI_KEY_PLACEHOLDER__" "$f"; then
+              echo "Placeholder still present in $f"
+              exit 1
+            fi
+          done
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

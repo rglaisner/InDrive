@@ -1,18 +1,24 @@
 # InDrive
 
-Project documentation starter.
+Static dashboard apps for the inDrive strategic expansion report, deployed on GitHub Pages.
 
-## Overview
+## Versions
 
-This repository contains the InDrive project source code.
+| Version | Entry URL | Description |
+|--------|-----------|-------------|
+| **Version 1 (Original)** | `/` (`index.html`) | Contest-winning dashboard layout with tabs for Executive Summary, regional deep-dive, Q&amp;A, chatbot, and battle-card generator. |
+| **Version 2 (Alternate)** | `/v2.html` | Alternate UI with scenario planner and default-data flow. |
 
-## Getting Started
+Both versions use the **same** build-time Gemini API key: the GitHub Actions workflow replaces `__GEMINI_KEY_PLACEHOLDER__` in **both** HTML files from the repository secret `GEMINI_KEY`.
 
-1. Install dependencies with your package manager.
-2. Start the development environment.
-3. Run tests before opening a pull request.
+Locally, until you inject a key at build time, AI features show a notice that the key is not configured.
 
-## Notes
+## Deployment
 
-- Update this file with project-specific setup instructions.
-- Add architecture notes and deployment steps as the project evolves.
+On push to `main`, [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml) builds `dist/` with the injected key and publishes to GitHub Pages.
+
+Ensure the `GEMINI_KEY` secret is set in the repo (or org) settings.
+
+## Getting started (local)
+
+Open `index.html` in a browser for Version 1. To preview Version 2, open `v2.html`. For full AI behavior locally, mirror the CI step or temporarily replace the placeholder string with your key (do not commit real keys).

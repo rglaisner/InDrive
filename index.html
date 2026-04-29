@@ -196,6 +196,36 @@
             color: #777;
             cursor: not-allowed;
         }
+        #about-app-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1100;
+            backdrop-filter: blur(5px);
+        }
+        #about-app-modal .modal-content {
+            text-align: left;
+            max-width: 760px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        #about-app-modal ul {
+            margin: 0 0 1rem 1.25rem;
+            padding: 0;
+        }
+        #about-app-modal li {
+            margin-bottom: 0.5rem;
+            color: var(--text-muted-color);
+        }
+        #about-app-modal a {
+            color: var(--primary-hover);
+        }
 
         /* Quill Editor Styles */
         #scenario-editor-container {
@@ -363,30 +393,30 @@
 </head>
 <body>
 
-    <!-- API Key Modal -->
-    <div id="api-key-modal">
-        <div class="modal-content" id="api-key-content">
-            <h2>Welcome to the inDrive Strategy Dashboard</h2>
-            <p>Please enter your Google Gemini API key to power the AI-driven modules (Scenario Planner, Chatbot, Battle-Card Generator).</p>
-            <input type="password" id="api-key-input" class="modal-input" placeholder="Enter your Google Gemini API Key">
-            <div class="modal-buttons">
-                <button id="run-default-btn" class="modal-button secondary" disabled>Run with Default Data</button>
-                <button id="create-scenario-btn" class="modal-button primary" disabled>Create a Custom Scenario</button>
-            </div>
-        </div>
-        <div class="modal-content" id="scenario-planner-content" style="display: none;">
-            <h2>Create Custom Scenario</h2>
-            <p>Describe your scenario below. Be specific about changes to hiring targets, roles, costs, or market conditions. For example: "Double the hiring for Senior Data Scientists and model a 15% increase in developer salaries in LATAM."</p>
-            <div id="scenario-editor-container">
-                <div id="scenario-editor"></div>
-            </div>
-            <div class="loader" id="scenario-loader"></div>
-            <div class="modal-buttons" style="margin-top: 1.5rem;">
-                <button id="process-scenario-btn" class="modal-button primary">Process Scenario</button>
+    <div id="about-app-modal" role="dialog" aria-modal="true" aria-labelledby="about-app-title">
+        <div class="modal-content">
+            <h2 id="about-app-title">About This Dashboard</h2>
+            <p>
+                This project started as an entry for the Talent Intelligence Collective "One and Done" challenge with inDrive.
+                In that contest, participants had one prompt attempt to generate a full location strategy report across LATAM, APAC, and Africa & Middle East.
+                This entry won the contest.
+            </p>
+            <p>
+                Contest details are available here:
+                <a href="https://talentintelligencecollective.substack.com/p/the-tic-one-and-done-challenge-is" target="_blank" rel="noopener noreferrer">The TIC One and Done Challenge</a>.
+            </p>
+            <ul>
+                <li><strong>How this app was built:</strong> The original prompt was authored for Lovable, which generated the initial `index.html` code for this dashboard.</li>
+                <li><strong>What is static in this code:</strong> All city scores, salary benchmarks, strengths/challenges, methodology, and Q&amp;A entries are preloaded static data points inside this HTML file.</li>
+                <li><strong>What LLM calls are used for:</strong> Gemini is used only for interactive features: processing custom scenarios, answering chatbot questions using the report context, and generating city-specific recruitment battle cards.</li>
+                <li><strong>What does not change automatically:</strong> Baseline report data does not auto-refresh from external data sources; it changes only through code edits or user-triggered AI transformations.</li>
+            </ul>
+            <div class="modal-buttons" style="justify-content: flex-end; margin-top: 1rem;">
+                <button id="close-about-modal-btn" class="modal-button primary">Open Dashboard</button>
             </div>
         </div>
     </div>
-    
+
     <div id="main-content" class="container">
         <header style="text-align: center; margin-bottom: 2rem;">
             <h1>inDrive Strategic Expansion Report</h1>
@@ -621,59 +651,24 @@ const initialDashboardData = {
   ]
 };
 
+const BUILD_TIME_GEMINI_KEY = "__GEMINI_KEY__";
 let masterApiKey = null;
 let currentDashboardData = JSON.parse(JSON.stringify(initialDashboardData));
 const chatHistory = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    const apiKeyInput = document.getElementById('api-key-input');
-    const runDefaultBtn = document.getElementById('run-default-btn');
-    const createScenarioBtn = document.getElementById('create-scenario-btn');
-    const processScenarioBtn = document.getElementById('process-scenario-btn');
-    const apiKeyModal = document.getElementById('api-key-modal');
-    const apiKeyContent = document.getElementById('api-key-content');
-    const scenarioPlannerContent = document.getElementById('scenario-planner-content');
-    
-    let quill;
-
-    function initializeQuill() {
-        quill = new Quill('#scenario-editor', {
-            theme: 'snow',
-            placeholder: 'e.g., Double hiring for Senior Data Scientists and model a 15% increase in developer salaries in LATAM.',
-        });
+    const aboutAppModal = document.getElementById('about-app-modal');
+    const closeAboutModalBtn = document.getElementById('close-about-modal-btn');
+    masterApiKey = BUILD_TIME_GEMINI_KEY.trim();
+    if (!masterApiKey || masterApiKey === "__GEMINI_KEY__") {
+        alert("This deployment is missing GEMINI_KEY. Configure the repository secret and redeploy.");
+        return;
     }
 
-    apiKeyInput.addEventListener('input', () => {
-        const hasKey = apiKeyInput.value.trim().length > 0;
-        runDefaultBtn.disabled = !hasKey;
-        createScenarioBtn.disabled = !hasKey;
-    });
-
-    runDefaultBtn.addEventListener('click', () => {
-        masterApiKey = apiKeyInput.value.trim();
-        if (!masterApiKey) return;
-        apiKeyModal.style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
-        renderDashboard(currentDashboardData, 'Baseline Scenario');
-    });
-
-    createScenarioBtn.addEventListener('click', () => {
-        masterApiKey = apiKeyInput.value.trim();
-        if (!masterApiKey) return;
-        apiKeyContent.style.display = 'none';
-        scenarioPlannerContent.style.display = 'block';
-        if (!quill) {
-            initializeQuill();
-        }
-    });
-
-    processScenarioBtn.addEventListener('click', () => {
-        const scenarioText = quill.getText().trim();
-        if (scenarioText) {
-            handleScenarioProcessing(scenarioText);
-        } else {
-            alert("Please describe a scenario.");
-        }
+    document.getElementById('main-content').style.display = 'block';
+    renderDashboard(currentDashboardData, 'Baseline Scenario');
+    closeAboutModalBtn.addEventListener('click', () => {
+        aboutAppModal.style.display = 'none';
     });
 
     function openTab(evt, tabName) {
@@ -952,6 +947,9 @@ function renderDashboard(data, scenarioTitle) {
 
 async function handleScenarioProcessing(scenarioText) {
     const loader = document.getElementById('scenario-loader');
+    if (!loader) {
+        return;
+    }
     loader.style.display = 'block';
 
     const systemPrompt = `You are a Data Transformation Engine. Your task is to modify a JSON data object based on a user's scenario.
@@ -992,7 +990,6 @@ For example, if the user says "increase developer salaries by 15% in Malaysia", 
         
         const modifiedData = JSON.parse(modifiedJsonString);
         
-        document.getElementById('api-key-modal').style.display = 'none';
         document.getElementById('main-content').style.display = 'block';
         renderDashboard(modifiedData, `Custom Scenario: "${scenarioText}"`);
 

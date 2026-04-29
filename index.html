@@ -411,8 +411,12 @@
                 <li><strong>What LLM calls are used for:</strong> Gemini is used only for interactive features: processing custom scenarios, answering chatbot questions using the report context, and generating city-specific recruitment battle cards.</li>
                 <li><strong>What does not change automatically:</strong> Baseline report data does not auto-refresh from external data sources; it changes only through code edits or user-triggered AI transformations.</li>
             </ul>
-            <div class="modal-buttons" style="justify-content: flex-end; margin-top: 1rem;">
-                <button id="close-about-modal-btn" class="modal-button primary" onclick="closeAboutModal()">Open Dashboard</button>
+            <p style="margin-top: 1rem;">
+                Two dashboard layouts are available. Pick one below to compare features side by side—you can switch versions anytime via <strong>Version 2</strong> links or by returning to this page.
+            </p>
+            <div class="modal-buttons" style="justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <button id="open-v2-btn" class="modal-button secondary" type="button">Open Version 2 (Alternate)</button>
+                <button id="close-about-modal-btn" class="modal-button primary" type="button">Open Version 1 (Original)</button>
             </div>
         </div>
     </div>
@@ -666,6 +670,12 @@ function closeAboutModal() {
 document.addEventListener('DOMContentLoaded', () => {
     const aboutAppModal = document.getElementById('about-app-modal');
     const closeAboutModalBtn = document.getElementById('close-about-modal-btn');
+    const openV2Btn = document.getElementById('open-v2-btn');
+    if (openV2Btn) {
+        openV2Btn.addEventListener('click', () => {
+            window.location.href = './v2.html';
+        });
+    }
     if (closeAboutModalBtn && aboutAppModal) {
         closeAboutModalBtn.addEventListener('click', closeAboutModal);
         aboutAppModal.addEventListener('click', (event) => {
